@@ -138,4 +138,9 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     @Override public void unregisterRequest(long reqId) {
         // No-op.
     }
+
+    /** {@inheritDoc} */
+    @Override public ClientListenerProtocolVersion protocolVersion() {
+        return ver;
+    }
 }
