@@ -352,7 +352,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES",
                 "IGNITE.NODE_ATTRIBUTES",
                 "IGNITE.TABLES",
-                "IGNITE.CLIENT_CONNECTIONS"
+                "IGNITE.CLIENT_CONNECTIONS",
+                "IGNITE.TRANSACTIONS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
@@ -776,7 +777,32 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.CLIENT_CONNECTIONS.REMOTE_ADDRESS.null.2147483647",
                 "IGNITE.CLIENT_CONNECTIONS.TYPE.null.2147483647",
                 "IGNITE.CLIENT_CONNECTIONS.USER.null.2147483647",
-                "IGNITE.CLIENT_CONNECTIONS.VERSION.null.2147483647"
+                "IGNITE.CLIENT_CONNECTIONS.VERSION.null.2147483647",
+                "IGNITE.TRANSACTIONS.LOCAL_NODE_ID.null.2147483647",
+                "IGNITE.TRANSACTIONS.STATE.null.2147483647",
+                "IGNITE.TRANSACTIONS.XID.null.2147483647",
+                "IGNITE.TRANSACTIONS.LABEL.null.2147483647",
+                "IGNITE.TRANSACTIONS.START_TIME.null.19",
+                "IGNITE.TRANSACTIONS.ISOLATION.null.2147483647",
+                "IGNITE.TRANSACTIONS.CONCURRENCY.null.2147483647",
+                "IGNITE.TRANSACTIONS.COLOCATED.null.1",
+                "IGNITE.TRANSACTIONS.DHT.null.1",
+                "IGNITE.TRANSACTIONS.IMPLICIT.null.1",
+                "IGNITE.TRANSACTIONS.IMPLICIT_SINGLE.null.1",
+                "IGNITE.TRANSACTIONS.INTERNAL.null.1",
+                "IGNITE.TRANSACTIONS.LOCAL.null.1",
+                "IGNITE.TRANSACTIONS.NEAR.null.1",
+                "IGNITE.TRANSACTIONS.ONE_PHASE_COMMIT.null.1",
+                "IGNITE.TRANSACTIONS.SUBJECT_ID.null.2147483647",
+                "IGNITE.TRANSACTIONS.SYSTEM.null.1",
+                "IGNITE.TRANSACTIONS.THREAD_ID.null.19",
+                "IGNITE.TRANSACTIONS.TIMEOUT.null.19",
+                "IGNITE.TRANSACTIONS.DURATION.null.19",
+                "IGNITE.TRANSACTIONS.ORIGINATING_NODE_ID.null.2147483647",
+                "IGNITE.TRANSACTIONS.OTHER_NODE_ID.null.2147483647",
+                "IGNITE.TRANSACTIONS.TOP_VER.null.2147483647",
+                "IGNITE.TRANSACTIONS.KEYS_COUNT.null.10",
+                "IGNITE.TRANSACTIONS.CACHE_IDS.null.2147483647"
             ));
 
             if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
