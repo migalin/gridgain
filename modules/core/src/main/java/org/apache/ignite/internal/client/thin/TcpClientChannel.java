@@ -74,12 +74,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_0_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_1_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_2_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_4_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_5_0;
-import static org.apache.ignite.internal.client.thin.ProtocolVersion.V1_6_0;
+import static org.apache.ignite.internal.client.thin.ProtocolVersion.*;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 
@@ -101,7 +96,7 @@ class TcpClientChannel implements ClientChannel {
     private static final long PAYLOAD_WAIT_TIMEOUT = 10L;
 
     /** Protocol version agreed with the server. */
-    private ProtocolVersion ver = V1_5_0;
+    private ProtocolVersion ver = CURRENT_VER;
 
     /** Channel. */
     private final Socket sock;
