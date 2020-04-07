@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.Random;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.X;
@@ -78,27 +79,39 @@ public class IgniteUtilsWorkDirectoryTest {
     }
 
     /**
-     * My_test_1
+     * My_test
      */
     @Test
     public void myTest1() {
-        X.println("myTest1 passed");
+        if (new Random().nextBoolean())
+            throw new RuntimeException();
     }
 
     /**
-     * My_test_2
+     * My_test
      */
     @Test
     public void myTest2() {
-        X.println("myTest2 passed");
+        if (new Random().nextInt(100) < 80)
+            throw new RuntimeException();
     }
 
     /**
-     * My_test_3
+     * My_test
      */
     @Test
     public void myTest3() {
-        X.println("myTest3 passed");
+        if (new Random().nextInt(100) < 20)
+            throw new RuntimeException();
+    }
+
+    /**
+     * My_test
+     */
+    @Test
+    public void myTest4() {
+        if (new Random().nextInt(100) < 10)
+            throw new RuntimeException();
     }
 
     /**
