@@ -110,8 +110,7 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest4() {
-        if (new Random().nextInt(100) < 10)
-            throw new RuntimeException();
+        throw new RuntimeException();
     }
 
     /**
