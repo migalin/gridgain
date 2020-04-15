@@ -32,7 +32,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  */
 public class GridWorkerPool {
     /** */
-    private final Executor exec;
+    protected final Executor exec;
 
     /** */
     private final IgniteLogger log;
