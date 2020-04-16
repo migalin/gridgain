@@ -83,8 +83,8 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest1() {
-        if (new Random().nextBoolean())
-            throw new RuntimeException();
+//        if (new Random().nextBoolean())
+//            throw new RuntimeException();
     }
 
     /**
@@ -101,8 +101,8 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest3() {
-        if (new Random().nextInt(100) < 20)
-            throw new RuntimeException();
+//        if (new Random().nextInt(100) < 20)
+//            throw new RuntimeException();
     }
 
     /**
@@ -110,6 +110,7 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest4() {
+        throw new RuntimeException();
     }
 
     /**
