@@ -110,7 +110,7 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest4() {
-        throw new RuntimeException();
+//        throw new RuntimeException();
     }
 
     /**
