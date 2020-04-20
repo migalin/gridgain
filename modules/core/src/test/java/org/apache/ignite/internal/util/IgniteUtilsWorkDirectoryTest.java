@@ -110,7 +110,8 @@ public class IgniteUtilsWorkDirectoryTest {
      */
     @Test
     public void myTest4() {
-//        throw new RuntimeException();
+        if (new Random().nextBoolean())
+            throw new RuntimeException();
     }
 
     /**
