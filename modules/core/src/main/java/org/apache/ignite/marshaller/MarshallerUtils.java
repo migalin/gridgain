@@ -23,9 +23,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.ClassSet;
+import org.apache.ignite.internal.processors.marshaller.MappedName;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
@@ -217,6 +221,27 @@ public class MarshallerUtils {
         catch (IOException e) {
             throw new IgniteCheckedException("Exception occurred while reading and creating list of classes " +
                 "[path=" + fileName + ']', e);
+        }
+    }
+
+    /**
+     * @param url Url.
+     */
+    public static void readSysTypes(URL url, Consumer<MappedName> mappedNameConsumer) {
+        try (BufferedReader rdr = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            String line;
+
+            while ((line = rdr.readLine()) != null) {
+                if (line.isEmpty() || line.startsWith("#"))
+                    continue;
+
+                String clsName = line.trim();
+
+                mappedNameConsumer.accept(new MappedName(clsName, true));
+            }
+        }
+        catch (IOException ex) {
+            throw new IgniteException("Exception occurred while reading list of classes" + "[url=" + url + ']', ex);
         }
     }
 }

@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -61,6 +59,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.MarshallerPlatformIds.JAVA_ID;
 import static org.apache.ignite.marshaller.MarshallerUtils.CLS_NAMES_FILE;
 import static org.apache.ignite.marshaller.MarshallerUtils.JDK_CLS_NAMES_FILE;
+import static org.apache.ignite.marshaller.MarshallerUtils.readSysTypes;
 
 /**
  * Marshaller context implementation.
@@ -118,7 +117,7 @@ public class MarshallerContextImpl implements MarshallerContext {
             boolean foundClsNames = false;
 
             while (urls.hasMoreElements()) {
-                processResource(urls.nextElement());
+                readSysTypes(urls.nextElement(), this::processSysType);
 
                 foundClsNames = true;
             }
@@ -133,7 +132,7 @@ public class MarshallerContextImpl implements MarshallerContext {
                 throw new IgniteException("Failed to load class names properties file packaged with ignite binaries " +
                     "[file=" + JDK_CLS_NAMES_FILE + ", ldr=" + ldr + ']');
 
-            processResource(jdkClsNames);
+            readSysTypes(jdkClsNames, this::processSysType);
 
             checkHasClassName(GridDhtPartitionFullMap.class.getName(), ldr, CLS_NAMES_FILE);
             checkHasClassName(GridDhtPartitionMap.class.getName(), ldr, CLS_NAMES_FILE);
@@ -145,13 +144,35 @@ public class MarshallerContextImpl implements MarshallerContext {
                         + ".classnames.properties");
 
                     while (pluginUrls.hasMoreElements())
-                        processResource(pluginUrls.nextElement());
+                        readSysTypes(pluginUrls.nextElement(), this::processSysType);
                 }
             }
         }
         catch (IOException e) {
             throw new IllegalStateException("Failed to initialize marshaller context.", e);
         }
+    }
+
+    /**
+     * @param mappedName Mapped name.
+     */
+    private void processSysType(MappedName mappedName) {
+        MappedName oldClsName;
+
+        int typeId = mappedName.className().hashCode();
+
+        if ((oldClsName = sysTypesMap.put(typeId, mappedName)) != null) {
+            if (!oldClsName.className().equals(mappedName.className()))
+                throw new IgniteException(
+                    "Duplicate type ID [id="
+                        + typeId
+                        + ", oldClsName="
+                        + oldClsName
+                        + ", clsName="
+                        + mappedName.className() + ']');
+        }
+
+        sysTypesSet.add(mappedName.className());
     }
 
     /** */
@@ -219,40 +240,6 @@ public class MarshallerContextImpl implements MarshallerContext {
             throw new IgniteException("Failed to read class name from class names properties file. " +
                 "Make sure class names properties file packaged with ignite binaries is not corrupted " +
                 "[clsName=" + clsName + ", fileName=" + fileName + ", ldr=" + ldr + ']');
-    }
-
-    /**
-     * @param url Resource URL.
-     * @throws IOException In case of error.
-     */
-    private void processResource(URL url) throws IOException {
-        try (BufferedReader rdr = new BufferedReader(new InputStreamReader(url.openStream()))) {
-            String line;
-
-            while ((line = rdr.readLine()) != null) {
-                if (line.isEmpty() || line.startsWith("#"))
-                    continue;
-
-                String clsName = line.trim();
-
-                int typeId = clsName.hashCode();
-
-                MappedName oldClsName;
-
-                if ((oldClsName = sysTypesMap.put(typeId, new MappedName(clsName, true))) != null) {
-                    if (!oldClsName.className().equals(clsName))
-                        throw new IgniteException(
-                                "Duplicate type ID [id="
-                                        + typeId
-                                        + ", oldClsName="
-                                        + oldClsName
-                                        + ", clsName="
-                                        + clsName + ']');
-                }
-
-                sysTypesSet.add(clsName);
-            }
-        }
     }
 
     /** {@inheritDoc} */
