@@ -536,6 +536,8 @@ public class GridDhtPartitionSupplier {
                         supplyMsg.missed(p);
 
                     errMsg = supplyMsg;
+
+                    log.warning(">>>>> fallbackToFullRebalance [errMsg=" + errMsg + ']');
                 }
                 else {
                     errMsg = new GridDhtPartitionSupplyMessageV2(

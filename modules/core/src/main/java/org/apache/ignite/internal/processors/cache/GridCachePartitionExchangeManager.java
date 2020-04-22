@@ -3231,6 +3231,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 if (lastFut.topologyVersion().after(exchId.topologyVersion())) {
                                     // Thre is no need to trigger a new rebalance.
                                     // The new one should be already triggered by lastFinishedFut.
+                                    log.warning(">>>>> skip rebalance reassign [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
+
                                     continue;
                                 }
 
@@ -3238,6 +3240,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     assert lastFut.exchangeId().equals(exchId) :
                                         "Exchange id of the last finished exchange is not equal to requested reassign [" +
                                             "exchFut=" + lastFut + ", reaasignExchId=" + exchId +']';
+
+                                    log.warning(">>>>> rebalance reassign (switch to full rebalance) [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
 
                                     exchFut = lastFut;
                                 }
