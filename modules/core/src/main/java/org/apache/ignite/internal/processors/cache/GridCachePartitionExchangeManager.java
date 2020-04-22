@@ -3228,13 +3228,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
 
                             if (lastFut != null) {
-                                if (lastFut.topologyVersion().after(exchId.topologyVersion())) {
-                                    // Thre is no need to trigger a new rebalance.
-                                    // The new one should be already triggered by lastFinishedFut.
-                                    log.warning(">>>>> skip rebalance reassign [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
-
-                                    continue;
-                                }
+//                                if (lastFut.topologyVersion().after(exchId.topologyVersion())) {
+//                                    // Thre is no need to trigger a new rebalance.
+//                                    // The new one should be already triggered by lastFinishedFut.
+//                                    log.warning(">>>>> skip rebalance reassign [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
+//
+//                                    continue;
+//                                }
 
                                 if (lastFut.hasExclusionsFromWalRebalance()) {
                                     assert lastFut.exchangeId().equals(exchId) :
