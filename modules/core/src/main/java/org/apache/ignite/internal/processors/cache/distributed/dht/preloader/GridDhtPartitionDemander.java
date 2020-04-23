@@ -1161,10 +1161,10 @@ public class GridDhtPartitionDemander {
             RebalanceFuture next,
             RebalanceFuture previous
         ) {
-            assert assignments != null : "Asiignments must not be null.";
-            assert exchFut != null && assignments.topologyVersion().equals(exchFut.context().events().topologyVersion()) :
-                "Topology version of assignments and exchange future should be the same " +
-                    "[assignments=" + assignments + ", fut=" + exchFut + ']';
+            assert assignments != null : "Assignments must not be null.";
+//            assert exchFut != null && assignments.topologyVersion().equals(exchFut.context().events().topologyVersion()) :
+//                "Topology version of assignments and exchange future should be the same " +
+//                    "[assignments=" + assignments + ", fut=" + exchFut + ']';
 
             this.rebalancingParts = U.newHashMap(assignments.size());
             this.assignments = assignments;

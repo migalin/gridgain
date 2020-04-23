@@ -3236,7 +3236,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 //                                    continue;
 //                                }
 
-                                if (lastFut.hasExclusionsFromWalRebalance()) {
+                                if (exchId.equals(lastFut.exchangeId()) && lastFut.hasExclusionsFromWalRebalance()) {
                                     assert lastFut.exchangeId().equals(exchId) :
                                         "Exchange id of the last finished exchange is not equal to requested reassign [" +
                                             "exchFut=" + lastFut + ", reaasignExchId=" + exchId +']';
@@ -3244,6 +3244,16 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     log.warning(">>>>> rebalance reassign (switch to full rebalance) [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
 
                                     exchFut = lastFut;
+                                }
+                                else {
+                                    AffinityTopologyVersion lastAffVer = cctx.exchange()
+                                                .lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
+
+                                    if (lastAffVer.after(exchId.topologyVersion())) {
+                                        //should be skipped
+                                        log.warning(">>>>> skip rebalance reassign [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
+                                        continue;
+                                    }
                                 }
                             }
                         }
@@ -3421,6 +3431,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 if (resVer == null && !grp.isLocal())
                                     resVer = grp.topology().readyTopologyVersion();
                             }
+                        }
+                        else {
+                            log.warning(">>>>> rebalance is not required [exchFut=" + exchFut + ']');
                         }
 
                         if (resVer == null)
