@@ -203,18 +203,18 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         AffinityTopologyVersion topVer = top.readyTopologyVersion();
 
-        boolean test = false;
+        boolean notChangedAffinity = false;
 
         List<GridDhtPartitionsExchangeFuture> futs = ctx.exchange().exchangeFutures();
         for (GridDhtPartitionsExchangeFuture f : futs) {
-            if (f.topologyVersion().equals(topVer)) {
-                test = f.changedAffinity();
+            if (f.exchangeDone() && f.topologyVersion().equals(topVer)) {
+                notChangedAffinity = !f.changedAffinity();
             }
         }
 
         assert exchFut == null ||
             (exchFut.context().events().topologyVersion().equals(top.readyTopologyVersion())
-             || !test) :
+             || notChangedAffinity) :
             "Topology version mismatch [exchId=" + exchId +
             ", grp=" + grp.name() +
             ", topVer=" + top.readyTopologyVersion() + ']';

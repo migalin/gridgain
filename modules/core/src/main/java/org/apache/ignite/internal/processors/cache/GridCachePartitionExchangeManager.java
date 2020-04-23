@@ -3265,7 +3265,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         // There was exchnage that does not change the affinity.
                                         // Let's try to choose the future corresponds to the lastAffVer or fallback to full rebalance.
                                         for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
-                                            if (f.topologyVersion().equals(lastAffVer)) {
+                                            if (f.exchangeDone() && f.topologyVersion().equals(lastAffVer)) {
                                                 log.warning(">>>>> choosen future for rebalance reassign. [" +
                                                     "reassignExchangeId=" + exchId + ", choosenFut=" + f + ']');
 
@@ -3274,6 +3274,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                                 break;
                                             }
                                         }
+
+                                        if (exchFut == null)
+                                            log.warning(">>>>> exchange fut was not found [exchId=" + exchId + ", lastAffVer=" + lastAffVer + ']');
                                     }
                                 }
                             }
