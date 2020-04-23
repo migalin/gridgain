@@ -33,6 +33,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.visor.annotation.InterruptibleVisorTask;
 import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
  *
  */
 @GridInternal
+@InterruptibleVisorTask
 public class VisorValidateIndexesTask extends VisorMultiNodeTask<VisorValidateIndexesTaskArg,
     VisorValidateIndexesTaskResult, VisorValidateIndexesJobResult> {
     /** */

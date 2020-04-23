@@ -16,14 +16,13 @@
 
 package org.apache.ignite.internal.processors.rest.protocols.tcp;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCheckedException;
@@ -59,8 +58,8 @@ import org.apache.ignite.internal.util.nio.GridNioFuture;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.annotation.InterruptibleVisorTask;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.CACHE_APPEND;
@@ -143,8 +142,8 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     /** Handler for all Redis requests. */
     private GridRedisNioListener redisLsnr;
 
-    /** Storage of pending futures. */
-    private final Map<GridNioSession, List<IgniteInternalFuture>> sesFutMap = new ConcurrentHashMap<>();
+    /** Storage of pending futures, which be interrupted when session would close. */
+    private final Map<GridNioSession, Set<IgniteInternalFuture>> sesInterruptibleFutMap = new ConcurrentHashMap<>();
 
     /**
      * Creates listener which will convert incoming tcp packets to rest requests and forward them to
@@ -249,11 +248,12 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
             if (req != null) {
                 IgniteInternalFuture<GridRestResponse> taskFut = hnd.handleAsync(req);
 
-                addSesFut(ses, taskFut);
+                if (isInterruptible(msg))
+                    addFutureToSession(ses, taskFut);
 
                 taskFut.listen(new CI1<IgniteInternalFuture<GridRestResponse>>() {
                     @Override public void apply(IgniteInternalFuture<GridRestResponse> fut) {
-                        removeSesFut(ses, taskFut);
+                        removeFutureFromSession(ses, taskFut);
 
                         GridClientResponse res = new GridClientResponse();
 
@@ -306,25 +306,39 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     }
 
     /**
+     * This method checks does request can be interrupted.
+     *
+     * @param msg Message.
+     * @return True of task can be interrupted, false otherwise.
+     */
+    private boolean isInterruptible(GridClientMessage msg) {
+        if (!(msg instanceof GridClientTaskRequest))
+            return false;
+
+        GridClientTaskRequest taskRequest = (GridClientTaskRequest)msg;
+
+        ClassLoader ldr = getClass().getClassLoader();
+
+        try {
+            return U.hasAnnotation(ldr.loadClass(taskRequest.taskName()), InterruptibleVisorTask.class);
+        }
+        catch (ClassNotFoundException e) {
+            log.warning("Task closure can't be found: [task=" + taskRequest.taskName() + ", ldr=" + ldr + ']');
+
+            return false;
+        }
+    }
+
+    /**
      * Memorize operation future until it was not completed.
      *
      * @param ses Session.
      * @param fut Operation future.
      */
-    private void addSesFut(GridNioSession ses, IgniteInternalFuture fut) {
-        synchronized (ses) {
-            List<IgniteInternalFuture> futs = sesFutMap.get(ses);
-
-            if (futs == null) {
-                futs = new ArrayList<>();
-
-                List<IgniteInternalFuture> oldFuts = sesFutMap.put(ses, futs);
-
-                assert oldFuts == null;
-            }
-
-            futs.add(fut);
-        }
+    private void addFutureToSession(GridNioSession ses, IgniteInternalFuture fut) {
+        sesInterruptibleFutMap.computeIfAbsent(ses, key ->
+            ConcurrentHashMap.newKeySet())
+            .add(fut);
     }
 
     /**
@@ -333,18 +347,14 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @param ses Session.
      * @param fut Operation future.
      */
-    private void removeSesFut(GridNioSession ses, IgniteInternalFuture fut) {
+    private void removeFutureFromSession(GridNioSession ses, IgniteInternalFuture fut) {
         assert fut.isDone() : "Operation is running ses=" + ses;
 
-        synchronized (ses) {
-            List<IgniteInternalFuture> futs = sesFutMap.get(ses);
+        sesInterruptibleFutMap.computeIfPresent(ses, (key, futs) -> {
+            futs.remove(fut);
 
-            if (!F.isEmpty(futs))
-                futs.remove(fut);
-
-            if (F.isEmpty(futs))
-                sesFutMap.remove(ses);
-        }
+            return futs;
+        });
     }
 
     /**
@@ -353,20 +363,21 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @param ses Session.
      */
     public void onSessionClosed(GridNioSession ses) {
-        synchronized (ses) {
-            List<IgniteInternalFuture> pendingFuts = sesFutMap.remove(ses);
-
-            if (!F.isEmpty(pendingFuts)) {
-                for (IgniteInternalFuture fut : pendingFuts) {
-                    try {
+        sesInterruptibleFutMap.computeIfPresent(ses, (key, pendingFuts) ->{
+            for (IgniteInternalFuture fut : pendingFuts) {
+                try {
+                    if (!fut.isDone())
                         fut.cancel();
-                    }
-                    catch (IgniteCheckedException e) {
-                        log.warning("Future was not cancel.", e);
-                    }
+                }
+                catch (IgniteCheckedException e) {
+                    log.warning("Future was not cancel.", e);
                 }
             }
-        }
+
+            return pendingFuts;
+        });
+
+        sesInterruptibleFutMap.remove(ses);
 
         ses.close();
     }
