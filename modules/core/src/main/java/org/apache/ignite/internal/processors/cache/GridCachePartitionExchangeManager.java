@@ -3236,14 +3236,19 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 //                                    continue;
 //                                }
 
-                                if (exchId.equals(lastFut.exchangeId()) && lastFut.hasExclusionsFromWalRebalance()) {
+                                boolean sameExchange = exchId.equals(lastFut.exchangeId());
+                                boolean partOfMergedExchanges = exchId.topologyVersion().isBetween(lastFut.initialVersion(), lastFut.topologyVersion());
+                                if ((sameExchange || partOfMergedExchanges)) {
                                     assert lastFut.exchangeId().equals(exchId) :
                                         "Exchange id of the last finished exchange is not equal to requested reassign [" +
                                             "exchFut=" + lastFut + ", reaasignExchId=" + exchId +']';
 
-                                    log.warning(">>>>> rebalance reassign (switch to full rebalance) [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
+                                    log.warning(">>>>> rebalance reassign " +
+                                        (lastFut.hasExclusionsFromWalRebalance()? "(switch to full rebalance)" : "") +
+                                        " [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
 
-                                    exchFut = lastFut;
+                                    if (lastFut.hasExclusionsFromWalRebalance())
+                                        exchFut = lastFut;
                                 }
                                 else {
                                     AffinityTopologyVersion lastAffVer = cctx.exchange()
@@ -3251,8 +3256,24 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                                     if (lastAffVer.after(exchId.topologyVersion())) {
                                         //should be skipped
-                                        log.warning(">>>>> skip rebalance reassign [reassignExchangeId=" + exchId + ", lastFinishedFut=" + lastFut + ']');
+                                        log.warning(">>>>> skip rebalance reassign. [reassignExchangeId=" + exchId +
+                                            ", lastAffVer=" + lastAffVer +
+                                            ", lastFinishedFut=" + lastFut + ']');
                                         continue;
+                                    }
+                                    else {
+                                        // There was exchnage that does not change the affinity.
+                                        // Let's try to choose the future corresponds to the lastAffVer or fallback to full rebalance.
+                                        for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
+                                            if (f.topologyVersion().equals(lastAffVer)) {
+                                                log.warning(">>>>> choosen future for rebalance reassign. [" +
+                                                    "reassignExchangeId=" + exchId + ", choosenFut=" + f + ']');
+
+                                                exchFut = f;
+
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
                             }
