@@ -775,12 +775,24 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     /**
      * Tests that demander switches to full rebalance if the previously chosen supplier for a group has failed
      * to perform historical rebalance due to an unexpected error while historical iterator (wal iterator) is created.
+     * Additionally, the client node joins the cluster between the demand message sent and the supply message received.
+     *
+     * @throws Exception If failed
+     */
+    @Test
+    public void testSwitchHistoricalRebalanceToFullAndClientJoin() throws Exception {
+        testSwitchHistoricalRebalanceToFull(IgniteWalRebalanceTest::injectFailingIOFactory, true);
+    }
+
+    /**
+     * Tests that demander switches to full rebalance if the previously chosen supplier for a group has failed
+     * to perform historical rebalance due to an unexpected error while historical iterator (wal iterator) is created.
      *
      * @throws Exception If failed
      */
     @Test
     public void testSwitchHistoricalRebalanceToFullDueToFailOnCreatingWalIterator() throws Exception {
-        testSwitchHistoricalRebalanceToFull(IgniteWalRebalanceTest::injectFailingIOFactory);
+        testSwitchHistoricalRebalanceToFull(IgniteWalRebalanceTest::injectFailingIOFactory, false);
     }
 
     /**
@@ -824,16 +836,22 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             catch (IgniteCheckedException | IOException e) {
                 throw new RuntimeException(e);
             }
-        });
+        }, false);
     }
 
     /**
      * Tests that demander switches to full rebalance if the previously chosen supplier for a group has failed
      * to perform historical rebalance due to an unexpected error.
      *
+     * @param corruptWalClo Closure that corrupts wal iterating on supplier node.
+     * @param needClientStart {@code true} if client node should join the cluster between
+     *                                    the demand message sent and the supply message received.
      * @throws Exception If failed
      */
-    public void testSwitchHistoricalRebalanceToFull(IgniteInClosure<IgniteEx> corruptWalClo) throws Exception {
+    public void testSwitchHistoricalRebalanceToFull(
+        IgniteInClosure<IgniteEx> corruptWalClo,
+        boolean needClientStart
+    ) throws Exception {
         backups = 3;
 
         IgniteEx supplier1 = startGrid(0);
@@ -934,6 +952,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Trigger rebalance process from suppliers.
         IgniteEx restartedDemander= startGrid(2);
 
+        recordMsgPred = null;
+        blockMsgPred = null;
+
         TestRecordingCommunicationSpi demanderSpi = TestRecordingCommunicationSpi.spi(grid(2));
 
         // Wait until demander starts historical rebalancning.
@@ -943,6 +964,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             .preloader().rebalanceFuture();
         final IgniteInternalFuture<Boolean> preloadFut2 = restartedDemander.cachex(cacheName2).context().group()
             .preloader().rebalanceFuture();
+
+        if (needClientStart)
+            startClientGrid(3);
 
         // Unblock messages and start tracking demand and supply messages.
         demanderSpi.stopBlock();

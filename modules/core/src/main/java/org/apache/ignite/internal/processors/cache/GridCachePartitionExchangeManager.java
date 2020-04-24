@@ -3228,18 +3228,28 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
 
                             if (lastFut != null) {
-                                if (lastFut.topologyVersion().after(exchId.topologyVersion())) {
-                                    // Thre is no need to trigger a new rebalance.
-                                    // The new one should be already triggered by lastFinishedFut.
-                                    continue;
+                                AffinityTopologyVersion lastAffChangedVer =
+                                    cctx.exchange().lastAffinityChangedTopologyVersion(lastFut.topologyVersion());
+
+                                // Reassign request as part of the last finished exchange.
+                                if (exchId.topologyVersion().isBetween(lastFut.initialVersion(), lastFut.topologyVersion())) {
+                                    if (lastFut.hasExclusionsFromWalRebalance())
+                                        exchFut = lastFut;
                                 }
+                                else  if (lastAffChangedVer.after(exchId.topologyVersion())) {
+                                        // There is a new exchange which should trigger rebalancing.
+                                        // This reassign request can be skipped.
+                                        continue;
+                                }
+                                else {
+                                    // There was an exchange that does not change the affinity.
+                                    for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
+                                        if (f.isDone() && f.topologyVersion().equals(lastAffChangedVer)) {
+                                            exchFut = f.hasExclusionsFromWalRebalance()? f : null;
 
-                                if (lastFut.hasExclusionsFromWalRebalance()) {
-                                    assert lastFut.exchangeId().equals(exchId) :
-                                        "Exchange id of the last finished exchange is not equal to requested reassign [" +
-                                            "exchFut=" + lastFut + ", reaasignExchId=" + exchId +']';
-
-                                    exchFut = lastFut;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
