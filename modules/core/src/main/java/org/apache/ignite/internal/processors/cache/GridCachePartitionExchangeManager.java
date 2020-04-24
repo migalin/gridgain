@@ -2415,10 +2415,22 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param task Task.
      * @return {@code True} if this is exchange task.
      */
-    private static boolean isExchangeTask(CachePartitionExchangeWorkerTask task) {
-        return task instanceof GridDhtPartitionsExchangeFuture ||
+    private /*static*/ boolean isExchangeTask(CachePartitionExchangeWorkerTask task) {
+        boolean res = task instanceof GridDhtPartitionsExchangeFuture ||
             task instanceof RebalanceReassignExchangeTask ||
             task instanceof ForceRebalanceExchangeTask;
+
+        if (res) {
+
+            if (task instanceof RebalanceReassignExchangeTask) {
+                RebalanceReassignExchangeTask t = (RebalanceReassignExchangeTask)task;
+                log.warning(">>>> pending exchange task [task=" + task + ", exchid=" + t.exchangeId() +']');
+            }
+            else
+                log.warning(">>>> pending exchange task [task=" + task +']');
+        }
+
+        return res;
     }
 
     /**
@@ -2932,6 +2944,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         void forceReassign(GridDhtPartitionExchangeId exchId) {
             if (!hasPendingExchange() && !busy)
                 futQ.add(new RebalanceReassignExchangeTask(exchId));
+            else
+                log.warning(">>>>> skipped reassign task due to pending exchange [exchId" + exchId + ']');
         }
 
         /**
@@ -3225,6 +3239,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             exchId = reassignTask.exchangeId();
 
+                            log.warning(">>>>> starting reassign task [exchId=" + exchId + ']');
+
                             GridDhtPartitionsExchangeFuture lastFut = lastFinishedFut.get();
 
                             if (lastFut != null) {
@@ -3264,15 +3280,18 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                     else {
                                         // There was exchnage that does not change the affinity.
                                         // Let's try to choose the future corresponds to the lastAffVer or fallback to full rebalance.
-                                        for (GridDhtPartitionsExchangeFuture f : cctx.exchange().exchangeFutures()) {
-                                            if (f.exchangeDone() && f.topologyVersion().equals(lastAffVer)) {
-                                                log.warning(">>>>> choosen future for rebalance reassign. [" +
-                                                    "reassignExchangeId=" + exchId + ", choosenFut=" + f + ']');
+                                        GridDhtPartitionsExchangeFuture candidate =
+                                            cctx.exchange().exchangeFutures().stream()
+                                                .filter(f -> f.exchangeDone())
+                                                .filter(f -> f.topologyVersion().equals(lastAffVer))
+                                                .findFirst()
+                                                .orElseGet(() -> null);
 
-                                                exchFut = f;
+                                        if (candidate != null) {
+                                            log.warning(">>>>> choosen future for rebalance reassign. [" +
+                                                "reassignExchangeId=" + exchId + ", choosenFut=" + candidate + ']');
 
-                                                break;
-                                            }
+                                            exchFut = candidate;
                                         }
 
                                         if (exchFut == null)
@@ -3467,6 +3486,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         // Must flip busy flag before assignments are given to demand workers.
                         busy = false;
                     }
+
+                    for (PartitionsExchangeAware comp : cctx.exchange().exchangeAwareComponents())
+                        comp.afterremove(exchFut);
 
                     if (!F.isEmpty(assignsMap)) {
                         int size = assignsMap.size();

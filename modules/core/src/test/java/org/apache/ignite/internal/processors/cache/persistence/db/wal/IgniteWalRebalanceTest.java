@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -63,7 +64,9 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTestUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
@@ -827,6 +830,11 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         });
     }
 
+    public static void mergeExchangeWaitVersion(Ignite node, long topVer) {
+        ((IgniteEx)node).context().cache().context().exchange().mergeExchangesTestWaitVersion(
+            new AffinityTopologyVersion(topVer, 0), null);
+    }
+
     /**
      * Tests that demander switches to full rebalance if the previously chosen supplier for a group has failed
      * to perform historical rebalance due to an unexpected error.
@@ -944,8 +952,57 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         final IgniteInternalFuture<Boolean> preloadFut2 = restartedDemander.cachex(cacheName2).context().group()
             .preloader().rebalanceFuture();
 
+        log.warning(">>>>> starting client node...");
+        recordMsgPred = null;
+        blockMsgPred = null;
+        CountDownLatch latch1 = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+
+        restartedDemander.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+            //onDoneBeforeTopologyUnlock
+            //onInitBeforeTopologyLock
+            @Override public void afterremove(GridDhtPartitionsExchangeFuture fut) {
+                latch1.countDown();
+
+                try {
+                    latch2.await();
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        //startClientGrid(3);
+        this.mergeExchangeWaitVersion(supplier1, 7);
+        GridTestUtils.runAsync(() -> {
+            try {
+                startGrid(3);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        GridTestUtils.runAsync(() -> {
+            try {
+                startGrid(4);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        log.warning(">>>>> client node started.");
+
+        latch1.await();
+
+        doSleep(5_000);
+
         // Unblock messages and start tracking demand and supply messages.
         demanderSpi.stopBlock();
+
+        doSleep(5_000);
+
+        latch2.countDown();
 
         // Wait until rebalancing will be cancelled for both suppliers.
         GridTestUtils.waitForCondition(() ->preloadFut1.isDone() && preloadFut2.isDone(), getTestTimeout());

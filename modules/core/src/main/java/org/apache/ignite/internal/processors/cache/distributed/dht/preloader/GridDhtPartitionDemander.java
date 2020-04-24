@@ -463,6 +463,8 @@ public class GridDhtPartitionDemander {
 
         ClusterNode supplierNode = ctx.node(supplierNodeId);
 
+        log.warning(">>>>> Received supply message [" + demandRoutineInfo(supplierNodeId, supplyMsg) + ']');
+
         try {
             String errMsg = null;
 
@@ -474,8 +476,8 @@ public class GridDhtPartitionDemander {
                 errMsg = "topology changed";
 
             if (nonNull(errMsg)) {
-                if (log.isDebugEnabled())
-                    log.debug("Supply message ignored (" + errMsg + ") [" +
+                /*if (log.isDebugEnabled())*/
+                    log.warning(">>>>> Supply message ignored (" + errMsg + ") [" +
                         demandRoutineInfo(supplierNodeId, supplyMsg) + ']');
 
                 return;

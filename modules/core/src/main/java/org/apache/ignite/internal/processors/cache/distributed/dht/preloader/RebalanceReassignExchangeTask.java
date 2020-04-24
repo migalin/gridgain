@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import org.apache.ignite.internal.processors.cache.CachePartitionExchangeWorkerTask;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  *
@@ -29,6 +30,7 @@ public class RebalanceReassignExchangeTask implements CachePartitionExchangeWork
      * @param exchId Exchange ID.
      */
     public RebalanceReassignExchangeTask(GridDhtPartitionExchangeId exchId) {
+        U.dumpStack(">>>>> RebalanceReassignExchangeTask[exchid="+exchId+']');
         assert exchId != null;
 
         this.exchId = exchId;
